@@ -6,7 +6,7 @@ from core.type import Video
 
 class Info:
     def __init__(self, platform: Video):
-        self.expired = int(time.time())+10 * 60
+        self.expired = int(time.time()) + 10 * 60
         self.platform = platform
         self.filename = None
         self.cover = ''
@@ -14,6 +14,7 @@ class Info:
         self.video = ''
         self.images = []
         self.extra = None
+        self.music = ''
 
     @property
     def ref(self):
@@ -22,6 +23,14 @@ class Info:
     @ref.setter
     def ref(self, value):
         self.desc = value
+
+    @ref.setter
+    def ref(self, value):
+        self.music = value
+
+    @property
+    def ref(self):
+        return self.music
 
     @property
     def ref(self):
@@ -35,6 +44,9 @@ class Info:
         _dict = {
             'cover': self.cover,
             'desc': self.desc,
+            'music': self.music,
+            'video': self.video,
+            'images': self.images,
         }
         return _dict
 

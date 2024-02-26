@@ -1,3 +1,5 @@
+import json
+
 from django.http import HttpResponse, FileResponse, HttpResponseServerError
 
 from core import config, handler_mapper
@@ -16,7 +18,7 @@ header = {
 }
 
 
-def download(info: Info) -> HttpResponse:
+def download_b(info: Info) -> HttpResponse:
     file = store.find_file(info.platform, info.filename)
     if file is not None:
         return make_stream_response(file, info.filename)
@@ -39,6 +41,75 @@ def download(info: Info) -> HttpResponse:
     if file is not None:
         return make_stream_response(file, info.filename)
     return HttpResponseServerError('download error')
+
+
+def download(info: Info) -> HttpResponse:
+    file = store.find_file(info.platform, info.filename)
+    if file is not None:
+        file = store.make_path(info.platform.value, info.filename)
+        dic = {
+            "msg": 'success',
+            "code": 200,
+            "data": {
+                "file": file
+            }
+        }
+        return HttpResponse(json.dumps(dic))
+        # return make_stream_response(file, info.filename)
+
+    service = handler_mapper.get_service(info.platform)
+    if info.extra is not None:
+        service.complex_download(info)
+    elif info.video != '':
+        res = http_utils.get(url=info.video, header=service.download_header())
+        if http_utils.is_error(res):
+            dic = {
+                "msg": 'file not found1',
+                "code": 902,
+                "data": {
+                    "file": ""
+                }
+            }
+            return HttpResponse(json.dumps(dic))
+            # return HttpResponseServerError(str(res))
+        if len(res.content) < 1024:
+            # return HttpResponseServerError("作品下载失败")
+            dic = {
+                "msg": 'file not found3',
+                "code": 903,
+                "data": {
+                    "file": ""
+                }
+            }
+            return HttpResponse(json.dumps(dic))
+        store.save_file(info.platform, res, info.filename)
+        res.close()
+    else:
+        store.save_image(info.platform, info.images, info.filename)
+
+    file = store.find_file(info.platform, info.filename)
+
+    print(info.filename)
+    if file is not None:
+        # return make_stream_response(file, info.filename)
+        file = store.make_path(info.platform.value, info.filename)
+        dic = {
+            "msg": 'success',
+            "code": 200,
+            "data": {
+                "file": file
+            }
+        }
+        return HttpResponse(json.dumps(dic))
+    # return HttpResponseServerError('download error')
+    dic = {
+        "msg": 'file not found4',
+        "code": 904,
+        "data": {
+            "file": ""
+        }
+    }
+    return HttpResponse(json.dumps(dic))
 
 
 def make_stream_response(file, filename) -> HttpResponse:

@@ -21,12 +21,13 @@ def get_info(request):
     if vtype is None:
         return HttpResponseBadRequest(ErrorResult.URL_NOT_INCORRECT.get_data())
 
-    token = store.get_token(vtype, url)
-    info = cache.get(token)
-    if info is not None:
-        dic = info.to_dict()
-        dic['token'] = token
-        return HttpResponse(json.dumps(dic))
+    # token = store.get_token(vtype, url)
+    # info = cache.get(token)
+    info = None
+    # if info is not None:
+    #     dic = info.to_dict()
+    #     dic['token'] = token
+    #     return HttpResponse(json.dumps(dic))
 
     logger.info(f'get {vtype.value} video info ==> {url}.')
 
@@ -35,9 +36,9 @@ def get_info(request):
 
     if result.is_success():
         info = result.get_data()
-        cache.save(token, info)
+        # cache.save(token, info)
         dic = info.to_dict()
-        dic['token'] = token
+        dic['token'] = ""
         return HttpResponse(json.dumps(dic))
     return HttpResponseServerError(result.get_data())
 

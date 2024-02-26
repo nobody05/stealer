@@ -73,6 +73,7 @@ class DouyinService(Service):
 
         handler = DouyinHandler()
         info = handler.get_info(share_url)
+
         if info is None or info['status_code'] != 0:
             return ErrorResult.VIDEO_ADDRESS_NOT_FOUNT
 
@@ -81,6 +82,7 @@ class DouyinService(Service):
         info = Info(platform=vtype)
         info.desc = DouyinService.get_desc(data)
         info.cover = DouyinService.get_cover(data)
+        info.music = DouyinService.get_music(data)
 
         # if data['aweme_type'] is not 0:
         if data['images'] is not None:
@@ -173,6 +175,18 @@ class DouyinService(Service):
             url = urls[-1]
             image_urls.append(url)
         return image_urls
+
+    @staticmethod
+    def get_music(data) -> str:
+        """
+        获取背景音乐
+        ['music']['play_url']['url_list'][0]
+
+        """
+
+        if data['music']['play_url']['url_list'] is not None and len(data['music']['play_url']['url_list']) > 0:
+            return data['music']['play_url']['url_list'][0]
+        return ""
 
 
 if __name__ == '__main__':
