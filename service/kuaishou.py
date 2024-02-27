@@ -13,7 +13,7 @@ from tools import http_utils
 from core import config
 from core.type import Video
 
-logger = logging.getLogger('request')
+logger = logging.getLogger('kuaishou')
 
 app_headers = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -137,9 +137,12 @@ class KuaishouService(Service):
             "isLongVideo": False,
         }
 
-        res = http_utils.post("https://v.m.chenzhongtech.com/rest/wd/photo/info?kpn=KUAISHOU&captchaToken=", param=params, header=headers)
+        res = http_utils.post("https://v.m.chenzhongtech.com/rest/wd/photo/info?kpn=KUAISHOU&captchaToken=",
+                              param=params, header=headers)
         if http_utils.is_error(res):
             return ErrorResult.VIDEO_INFO_ERROR
+
+        logger.info("kuaishou.svc.res--{}".format(res.content))
 
         data = json.loads(res.content)
 
@@ -156,6 +159,7 @@ class KuaishouService(Service):
             info.images = KuaishouService.get_image(data)
         info.desc = KuaishouService.get_desc(data)
         info.cover = KuaishouService.get_cover(data)
+        info.music = KuaishouService.get_music(data)
 
         return Result.success(info)
 
@@ -187,8 +191,24 @@ class KuaishouService(Service):
     def download_header(cls) -> dict:
         return download_headers
 
+    @staticmethod
+    def get_music(data) -> str:
+        """
+        获取背景音乐
+        ['photo']['music']['accompanimentUrls'][0]['url']
+
+        """
+        if data.get("photo").get("music", None) is not None:
+            music = data.get("photo").get("music", None)
+
+            logger.info("kuaishou.svc.get_music--{}".format(json.dumps(music)))
+            if music is not None:
+                if music.get('accompanimentUrls') is not None and len(music['accompanimentUrls']) > 0:
+                    return music['accompanimentUrls'][0]['url']
+
+        return ""
+
 
 if __name__ == '__main__':
     KuaishouService.get_info('https://www.kuaishou.com/f/X-6sB0BYpvzO51Df')
     KuaishouService.get_info('https://v.kuaishou.com/fUe3hM')
-
