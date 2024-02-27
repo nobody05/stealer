@@ -73,7 +73,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware', # pip install django-cors-headers
+    'corsheaders.middleware.CorsMiddleware',  # pip install django-cors-headers
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -166,6 +166,26 @@ LOGGING = {
             'formatter': 'simple',
             'encoding': "utf-8"
         },
+        # 记录请求
+        'douyin': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',  # 保存到文件，自动切
+            'filename': os.path.join(BASE_LOG_DIR, "douyin.log"),
+            'maxBytes': 1024 * 1024 * 10,  # 日志大小 10M
+            'backupCount': 5,
+            'formatter': 'simple',
+            'encoding': "utf-8"
+        },
+        'kuaishou': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',  # 保存到文件，自动切
+            'filename': os.path.join(BASE_LOG_DIR, "kuaishou.log"),
+            'maxBytes': 1024 * 1024 * 10,  # 日志大小 10M
+            'backupCount': 5,
+            'formatter': 'simple',
+            'encoding': "utf-8"
+        },
+
         # 专门定义一个收集特定信息的日志
         'collect': {
             'level': 'INFO',
@@ -180,7 +200,7 @@ LOGGING = {
     'loggers': {
         # 默认的logger应用如下配置
         '': {
-            'handlers': ['default', 'console', 'error'],  # 上线之后可以把'console'移除
+            'handlers': ['default', 'error'],  # 上线之后可以把'console'移除
             'level': 'DEBUG',
             'propagate': True,  # 向不向更高级别的logger传递
         },
@@ -191,6 +211,14 @@ LOGGING = {
         'request': {
             'handlers': ['request'],
             'level': 'INFO',
+        },
+        'douyin': {
+            'handlers': ['douyin'],
+            'level': 'DEBUG',
+        },
+        'kuaishou': {
+            'handlers': ['kuaishou'],
+            'level': 'DEBUG',
         }
     },
 }

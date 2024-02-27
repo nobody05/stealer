@@ -4,7 +4,7 @@ from typing import List
 from urllib import parse
 
 from django.http import HttpResponse
-
+import logging
 from browser.douyin import DouyinHandler
 from core.interface import Service
 from core.model import Result, ErrorResult, Info
@@ -12,6 +12,7 @@ from tools import http_utils
 from core import config
 from core.type import Video
 
+logger = logging.getLogger('douyin')
 
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
@@ -77,7 +78,17 @@ class DouyinService(Service):
         if info is None or info['status_code'] != 0:
             return ErrorResult.VIDEO_ADDRESS_NOT_FOUNT
 
-        data = info['aweme_detail']
+        if info.get("aweme_detail", None) is not None:
+            data = info['aweme_detail']
+        elif info.get("aweme_list", None) is not None:
+            if len(info['aweme_list']) > 0:
+                data = info['aweme_list'][0]
+            else:
+                data = None
+        else:
+            data = None
+
+        logger.info("douyin.svc.get_info-data{}".format(json.dumps(data)))
 
         info = Info(platform=vtype)
         info.desc = DouyinService.get_desc(data)
@@ -116,7 +127,8 @@ class DouyinService(Service):
         if http_utils.is_error(res):
             return ErrorResult.VIDEO_INFO_NOT_FOUNT
 
-        json_data = re.findall(r'(?<=<script id=\"RENDER_DATA\" type=\"application\/json\">)(.*?)(?=<\/script>)', res.text)
+        json_data = re.findall(r'(?<=<script id=\"RENDER_DATA\" type=\"application\/json\">)(.*?)(?=<\/script>)',
+                               res.text)
         if len(json_data) == 0:
             return ErrorResult.VIDEO_INFO_ERROR
 
