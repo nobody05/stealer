@@ -1,15 +1,148 @@
 import json
 import logging
+import subprocess
 from typing import Union, Optional, Any
 
 from django.http import *
-
+from django.shortcuts import render
 from core import handler_mapper, cache, vid_download
 from core.model import ErrorResult
 from core.type import Video
 from tools import store
+import os
+import ffmpeg
 
 logger = logging.getLogger('request')
+
+
+def video_screenshot(request):
+    # basedir = "./screenshot/"
+    basedir = os.environ['video_screenshot_basedir']
+    output_dir = basedir + "output/"
+    save_dir = basedir + "save/"
+
+    filename = request.GET.get("file_name")
+    snapshot_seconds = request.GET.get("snapshot_seconds")
+
+    if snapshot_seconds is None or len(snapshot_seconds) == 0:
+        return HttpResponse(json.dumps({
+            "code": 90,
+            'msg': 'argument empty'
+        }))
+    snapshot_seconds_slice = snapshot_seconds.split(",")
+    save_file = save_dir + filename
+
+    logger.info(
+        'video_screenshot-getrequest-filename{}--save_file{}---snapshot_seconds{}'.format(filename, save_file,
+                                                                                          snapshot_seconds))
+
+    if os.path.exists(save_file) is False:
+        return HttpResponse(json.dumps({
+            "code": 91,
+            'msg': 'file not found'
+        }))
+
+    thumb_slices = []
+    try:
+        probe = ffmpeg.probe(save_file)
+        video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
+
+        if video_stream is None:
+            return HttpResponse(json.dumps({
+                "code": 92,
+                'msg': 'file empty'
+            }))
+
+        video_duration = video_stream.get("duration", 0)
+        if float(video_duration) < 1:
+            return HttpResponse(json.dumps({
+                "code": 93,
+                'msg': 'file length empty'
+            }))
+
+        for seconds in snapshot_seconds_slice:
+            if int(seconds) > float(video_duration):
+                continue
+
+            if int(seconds) < 10:
+                s = "00:00:0" + str(seconds)
+            else:
+                s = "00:00:" + str(seconds)
+
+            thumbnail_file = filename + "_" + str(seconds) + ".png"
+
+            (ffmpeg.input(save_file, ss=s)  # 从视频的15秒处提取缩略图
+             .output(output_dir + "/" + thumbnail_file, vframes=1)  # 设置输出文件名和帧数
+             .run())
+
+            thumb_slices.append(thumbnail_file)
+
+    except Exception as e:
+        logger.info('controller.watermark_removal.upload fail e{}'.format(str(e)))
+
+        return HttpResponse(json.dumps({
+            "code": 94,
+            'msg': 'image process fail'
+        }))
+
+    return HttpResponse(json.dumps({
+        'code': 200,
+        'msg': "",
+        'data': {
+            "thumbs": thumb_slices
+        }
+    }))
+
+
+def watermark_removal(request):
+    basedir = os.environ['watermark_removal_basedir']
+    output_dir = basedir + "output/"
+    save_dir = basedir + "save/"
+
+    filename = request.GET.get("file_name")
+    save_file = save_dir + filename
+    output_file = output_dir + filename
+
+    logger.info(
+        'watermark-removal-getrequest-filename{}--save_file{}---output_file{}'.format(filename, save_file, output_file))
+
+    if os.path.exists(save_file) is False:
+        return HttpResponse(json.dumps({
+            "code": 92,
+            'msg': 'file not found'
+        }))
+
+    try:
+        os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
+        working_dir = "/www/wwwroot/watermark-removal"
+
+        subprocess.run(
+            ["/usr/local/python3.7/bin/python3.7", "/www/wwwroot/watermark-removal/main.py", "--image", f"{save_file}",
+             "--output",
+             f"{output_file}",
+             "--checkpoint_dir", "/www/wwwroot/watermark-removal/model/", "--watermark_type", "istock"],
+            cwd=working_dir)
+    except Exception as e:
+        logger.info('controller.watermark_removal.upload fail e{}'.format(str(e)))
+
+        return HttpResponse(json.dumps({
+            "code": 93,
+            'msg': 'image process fail'
+        }))
+
+    if os.path.exists(output_file) is False:
+        return HttpResponse(json.dumps({
+            "code": 94,
+            'msg': 'file not found2'
+        }))
+
+    return HttpResponse(json.dumps({
+        'code': 200,
+        'msg': "",
+        'data': {
+            "image": filename
+        }
+    }))
 
 
 def get_info(request):
