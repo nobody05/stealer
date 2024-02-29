@@ -15,6 +15,62 @@ import ffmpeg
 logger = logging.getLogger('request')
 
 
+def video_convert_mp3(request):
+    basedir = os.environ['video_screenshot_basedir']
+    output_dir = basedir + "convert_output/"
+    save_dir = basedir + "convert_save/"
+
+    filename = request.GET.get("file_name")
+    save_file = save_dir + filename
+
+    logger.info(
+        'video_convert_mp3-getrequest-filename{}--save_file{}'.format(filename, save_file))
+
+    if os.path.exists(save_file) is False:
+        return HttpResponse(json.dumps({
+            "code": 91,
+            'msg': 'file not found'
+        }))
+
+    try:
+        probe = ffmpeg.probe(save_file)
+        video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
+
+        if video_stream is None:
+            return HttpResponse(json.dumps({
+                "code": 92,
+                'msg': 'file empty'
+            }))
+
+        video_duration = video_stream.get("duration", 0)
+        if float(video_duration) < 1:
+            return HttpResponse(json.dumps({
+                "code": 93,
+                'msg': 'file length empty'
+            }))
+
+        output_mp3file = filename + ".mp3"
+        stream = ffmpeg.input(save_file)
+        stream = ffmpeg.output(stream, output_dir + output_mp3file)
+        ffmpeg.run(stream)
+
+    except Exception as e:
+        logger.info('controller.video_convert_mp3.upload fail e{}'.format(str(e)))
+
+        return HttpResponse(json.dumps({
+            "code": 94,
+            'msg': 'image process fail'
+        }))
+
+    return HttpResponse(json.dumps({
+        'code': 200,
+        'msg': "",
+        'data': {
+            "file": output_mp3file
+        }
+    }))
+
+
 def video_screenshot(request):
     # basedir = "./screenshot/"
     basedir = os.environ['video_screenshot_basedir']

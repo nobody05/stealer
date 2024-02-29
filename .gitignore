@@ -132,3 +132,5 @@ video/*/
 *.pid
 !appfront/build
 *.DS_Store
+
+run_prd.sh
