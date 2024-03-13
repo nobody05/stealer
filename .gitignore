@@ -134,3 +134,8 @@ video/*/
 *.DS_Store
 
 run_prd.sh
+*.mp3
+*.wav
+*.jpg
+*.png
+*.jpeg
